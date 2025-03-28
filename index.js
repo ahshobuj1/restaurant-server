@@ -3,7 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 
 const app = express();
-const port = process.env.PORT || 5000; // Changed from BASE_URL to PORT (more standard)
+const port = process.env.PORT || 7000; // Changed from BASE_URL to PORT (more standard)
 
 // Middleware
 app.use(cors());
@@ -27,6 +27,9 @@ async function run() {
     await client.connect();
 
     const menuCollection = client.db('bistroRestaurant').collection('menu');
+    const reviewCollection = client.db('bistroRestaurant').collection('review');
+    const userCollection = client.db('bistroRestaurant').collection('user');
+    const cartCollection = client.db('bistroRestaurant').collection('cart');
 
     app.get('/menu', async (req, res) => {
       try {
@@ -39,6 +42,38 @@ async function run() {
         console.error('Error fetching menu:', error);
         res.status(500).send({message: 'Internal server error'});
       }
+    });
+
+    //* User API
+    app.post('/user', async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get('/user', async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    //* Review API
+    app.get('/review', async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
+    //* Carts API
+    app.get('/cart', async (req, res) => {
+      const email = req?.query?.email;
+      const query = {email: email};
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post('/cart', async (req, res) => {
+      const cart = req.body;
+      const result = await cartCollection.insertOne(cart);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
