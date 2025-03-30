@@ -9,7 +9,7 @@ const port = process.env.PORT || 7000; // Changed from BASE_URL to PORT (more st
 app.use(cors());
 app.use(express.json());
 
-import {MongoClient, ServerApiVersion} from 'mongodb';
+import {MongoClient, ObjectId, ServerApiVersion} from 'mongodb';
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@ecommercedatabase.la5qrjd.mongodb.net/?appName=ecommerceDatabase`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -56,6 +56,26 @@ async function run() {
       res.send(result);
     });
 
+    app.delete('/user/:id', async (req, res) => {
+      const id = req?.params?.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await userCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    app.patch('/user/:id', async (req, res) => {
+      const id = req?.params?.id;
+      const filter = {_id: new ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          role: 'admin',
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     //* Review API
     app.get('/review', async (req, res) => {
       const result = await reviewCollection.find().toArray();
@@ -73,6 +93,13 @@ async function run() {
     app.post('/cart', async (req, res) => {
       const cart = req.body;
       const result = await cartCollection.insertOne(cart);
+      res.send(result);
+    });
+
+    app.delete('/cart/:id', async (req, res) => {
+      const id = req?.params?.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await cartCollection.deleteOne(filter);
       res.send(result);
     });
 
