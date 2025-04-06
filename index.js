@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 const port = process.env.PORT || 7000; // Changed from BASE_URL to PORT (more standard)
@@ -31,6 +32,15 @@ async function run() {
     const userCollection = client.db('bistroRestaurant').collection('user');
     const cartCollection = client.db('bistroRestaurant').collection('cart');
 
+    //* JWT Token
+    app.post('/jwt', async (req, res) => {
+      const user = req?.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET, {expiresIn: '1h'});
+      res.send({token});
+    });
+
+    //* Menu Api
+
     app.get('/menu', async (req, res) => {
       try {
         const result = await menuCollection.find().toArray();
@@ -52,6 +62,7 @@ async function run() {
     });
 
     app.get('/user', async (req, res) => {
+      console.log('[jwt Token]', req?.headers?.authorization);
       const result = await userCollection.find().toArray();
       res.send(result);
     });
