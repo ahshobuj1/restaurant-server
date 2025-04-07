@@ -32,11 +32,59 @@ async function run() {
     const userCollection = client.db('bistroRestaurant').collection('user');
     const cartCollection = client.db('bistroRestaurant').collection('cart');
 
+    //* Middlewares
+    const verifyToken = (req, res, next) => {
+      const token = req?.headers?.authorization?.split(' ')[1];
+      console.log('[jwt Token]', token);
+
+      if (!req?.headers?.authorization) {
+        return res.status(401).send({message: 'unauthorized access'});
+      }
+
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({message: 'unauthorized access'});
+        }
+
+        req.decoded = decoded;
+        next();
+      });
+    };
+
+    //* VerifyAdmin after using verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req?.decoded?.email;
+      const query = {email: email};
+      const user = await userCollection.findOne(query);
+      const admin = user?.role === 'admin';
+      if (!admin) {
+        return res.status(403).send({message: 'forbidden access'});
+      }
+      next();
+    };
+
     //* JWT Token
     app.post('/jwt', async (req, res) => {
       const user = req?.body;
       const token = jwt.sign(user, process.env.JWT_SECRET, {expiresIn: '1h'});
       res.send({token});
+    });
+
+    //* Admin api
+    app.get('/user/admin/:email', verifyToken, async (req, res) => {
+      const email = req?.params?.email;
+
+      if (email !== req?.decoded?.email) {
+        return res.status(403).send({message: 'forbidden access'});
+      }
+
+      const query = {email: email};
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({admin});
     });
 
     //* Menu Api
@@ -61,8 +109,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/user', async (req, res) => {
-      console.log('[jwt Token]', req?.headers?.authorization);
+    app.get('/user', verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
