@@ -102,9 +102,53 @@ async function run() {
       }
     });
 
+    app.get('/menu/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await menuCollection.findOne(filter);
+      res.send(result);
+    });
+
+    app.patch('/menu/:id', async (req, res) => {
+      const data = req.body;
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+
+      const updateDoc = {
+        $set: {
+          name: data.name,
+          price: data.price,
+          category: data.category,
+          recipe: data.recipe,
+        },
+      };
+
+      const result = await menuCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
+      const menuItems = req?.body;
+      const result = await menuCollection.insertOne(menuItems);
+      res.send(result);
+    });
+
+    app.delete('/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await menuCollection.deleteOne(filter);
+      res.send(result);
+    });
+
     //* User API
     app.post('/user', async (req, res) => {
       const user = req.body;
+      const query = {email: user?.email};
+      const isExist = await userCollection.findOne(query);
+      if (isExist) {
+        return res.send({message: 'User already exists'});
+      }
+
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
