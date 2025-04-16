@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import jwt from 'jsonwebtoken';
+import stripePackage from 'stripe';
+const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 7000; // Changed from BASE_URL to PORT (more standard)
@@ -31,6 +33,9 @@ async function run() {
     const reviewCollection = client.db('bistroRestaurant').collection('review');
     const userCollection = client.db('bistroRestaurant').collection('user');
     const cartCollection = client.db('bistroRestaurant').collection('cart');
+    const paymentCollection = client
+      .db('bistroRestaurant')
+      .collection('payment');
 
     //* Middlewares
     const verifyToken = (req, res, next) => {
@@ -85,6 +90,42 @@ async function run() {
         admin = user?.role === 'admin';
       }
       res.send({admin});
+    });
+
+    //* Stripe payment
+
+    app.post('/create-payment-intent', async (req, res) => {
+      const {price} = req.body;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: parseInt(price * 100),
+        currency: 'usd',
+        payment_method_types: ['card'],
+      });
+
+      res.send({clientSecret: paymentIntent.client_secret});
+    });
+
+    app.post('/payments', verifyToken, async (req, res) => {
+      const paymentHistory = req.body;
+      const paymentResult = await paymentCollection.insertOne(paymentHistory);
+
+      const filter = {
+        _id: {$in: paymentHistory.ids.map((id) => new ObjectId(id))},
+      };
+      const cartResult = await cartCollection.deleteMany(filter);
+      res.send({paymentResult, cartResult});
+    });
+
+    app.get('/payment', async (req, res) => {
+      const email = req.query.email;
+      const filter = {email: email};
+      const result = await paymentCollection
+        .find(filter)
+        .sort({date: -1})
+        .toArray();
+
+      res.send(result);
     });
 
     //* Menu Api
