@@ -92,6 +92,26 @@ async function run() {
       res.send({admin});
     });
 
+    //* Admin and User Stats
+    app.get('/admin-stats', async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const products = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+
+      const revenueItems = await paymentCollection
+        .aggregate([{$group: {_id: null, totalRevenue: {$sum: '$price'}}}])
+        .toArray();
+
+      const revenue = revenueItems[0]?.totalRevenue || 0;
+
+      res.send({
+        users,
+        products,
+        orders,
+        revenue,
+      });
+    });
+
     //* Stripe payment
 
     app.post('/create-payment-intent', async (req, res) => {
@@ -125,6 +145,11 @@ async function run() {
         .sort({date: -1})
         .toArray();
 
+      res.send(result);
+    });
+
+    app.get('/manage-payment', async (req, res) => {
+      const result = await paymentCollection.find().toArray();
       res.send(result);
     });
 
