@@ -6,7 +6,7 @@ import stripePackage from 'stripe';
 const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
-const port = process.env.PORT || 7000; // Changed from BASE_URL to PORT (more standard)
+const port = process.env.PORT || 5000; // Changed from BASE_URL to PORT (more standard)
 
 // Middleware
 app.use(cors());
